@@ -1,0 +1,83 @@
+projects:
+  -
+    name: "face-pay-mobile"    # 项目名称[唯 一]
+    techType: "nodejs:8.12"   # 技术: java:8 | nodejs | python | c++ | go | php  (版本号用":"分割)
+    appType: "bin"    # 类型: spring-cloud | spring-boot | tomcat-web | nodejs | python | php | bin
+    
+    vrm:
+      name: "VRM-1001"
+      onlyCI: true
+    
+    archive:
+      docker:
+        image: "zkj-centos/nginx-cdn:1.8.1"
+      dockerOutput: true
+      output: "docker,zip"
+      zipOutput: true
+
+    ## 维护者信息 (必须)
+    maintainer:
+      leader: "lixia.han"      ## 开发经理域账号
+      tester: "lixia.han"      ## 测试经理域账号
+    
+    build:
+      appFile: "dist.zip"
+      arachni: false
+      cmd:
+        - rm -rf dist &&
+        - npm install --unsafe-perm &&
+        - npm run build &&
+        - cd dist && zip -r dist.zip ./* && cd ../ && mv dist/dist.zip dist.zip
+      sonar: true
+
+    # 发布部署，物理机部署的为 FTP 上线流程审批后推送到自动部署，容器部署的为harbor，上线流程审批后推送到管控平台
+    deploy:
+      default:
+        type: "kubernetes"
+        cpu: "300"
+        memory: "1024"
+        deployType: "mydeploy"
+        instances: "1"
+        hostDeploy: false
+        kubernetesDeploy: true
+        serviceProbes:
+        - mode: "readiness"
+          schema: "http"
+          path: "/readiness/health/"                    ##springcloud应用引入了eyas-actuator默认检测path为：/readiness/health/，具体见第6点
+          port: "8080"                                 ##应用启动的端口
+          initdelaySeconds: 20                         ##应用启动完成需要的时间，默认20s，延迟去执行检测
+          periodSeconds: 10                            ##检测周期10s检测一次
+          timeoutSeconds: 30                           ##每次检测超时时间 30s
+          failureThreshold: 5                          ##失败阈值5次，超过5次则放弃检测，标记为Unready
+          successThreshold: 1
+        env:
+          APP_OPTS: "-Djava.library.path=/usr/local/lib -server -Xms1024m -Xmx1024m -XX:MaxPermSize=256m -Djava.awt.headless=true -Dsun.net.client.defaultConnectTimeout=60000 -Dsun.net.client.defaultReadTimeout=60000 -Djmagick.systemclassloader=no -Dnetworkaddress.cache.ttl=300 -Dsun.net.inetaddr.ttl=300 -Deureka.client.register-with-eureka=false -Deureka.client.fetch-registry=false"
+        commands:
+        - "sh"
+        - "-c"
+        - "/opt/nginx/runnginx.sh"
+      
+      online:
+        type: "kubernetes"
+        cpu: "300"
+        memory: "1024"
+        deployType: "mydeploy"
+        instances: "1"
+        hostDeploy: false
+        kubernetesDeploy: true
+        serviceProbes:
+        - mode: "readiness"
+          schema: "http"
+          path: "/readiness/health/"                   ##springcloud应用引入了eyas-actuator默认检测path为：/readiness/health/，具体见第6点
+          port: "8080"                                 ##应用启动的端口
+          initdelaySeconds: 20                         ##应用启动完成需要的时间，默认20s，延迟去执行检测
+          periodSeconds: 10                            ##检测周期10s检测一次
+          timeoutSeconds: 30                           ##每次检测超时时间 30s
+          failureThreshold: 5                          ##失败阈值5次，超过5次则放弃检测，标记为Unready
+          successThreshold: 1
+        env:
+          APP_OPTS: "-Djava.library.path=/usr/local/lib -server -Xms1024m -Xmx1024m -XX:MaxPermSize=256m -Djava.awt.headless=true -Dsun.net.client.defaultConnectTimeout=60000 -Dsun.net.client.defaultReadTimeout=60000 -Djmagick.systemclassloader=no -Dnetworkaddress.cache.ttl=300 -Dsun.net.inetaddr.ttl=300 -Deureka.client.register-with-eureka=false -Deureka.client.fetch-registry=false"
+        commands:
+        - "sh"
+        - "-c"
+        - "/opt/nginx/runnginx.sh"
